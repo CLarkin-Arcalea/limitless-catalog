@@ -1,0 +1,23 @@
+# Personal data - never commit
+limitless.db
+limitless.db-wal
+limitless.db-shm
+*.db
+*.db-wal
+*.db-shm
+
+# Build artifacts
+/limitless-catalog
+/dist/
+
+# OS / editor
+.DS_Store
+
+# Task planning scratch space, not part of the shipped project
+.superpowers/
+
+# Local harness settings - never commit
+.claude/
+
+# Runtime logs
+backfill.log

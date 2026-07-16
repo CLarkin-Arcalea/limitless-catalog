@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>limitless-catalog - local searchable catalog of Limitless lifelogs</title>
+<meta name="description" content="A single-binary tool that archives your Limitless Pendant lifelogs into a local, searchable SQLite catalog you own.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #59636e;
+    --accent: #0969da;
+    --border: #d1d9e0;
+    --code-bg: #f6f8fa;
+    --code-fg: #1f2328;
+    --nav-bg: rgba(255, 255, 255, 0.92);
+    --th-bg: #f6f8fa;
+    --note-bg: #f0f6ff;
+    --note-border: #0969da;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #9198a1;
+      --accent: #4493f8;
+      --border: #30363d;
+      --code-bg: #161b22;
+      --code-fg: #e6edf3;
+      --nav-bg: rgba(13, 17, 23, 0.92);
+      --th-bg: #161b22;
+      --note-bg: #10192b;
+      --note-border: #4493f8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 4rem; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--nav-bg);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-right: 1.1rem;
+  }
+  nav a:hover { color: var(--accent); }
+  nav .brand {
+    color: var(--fg);
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  main {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 4rem;
+  }
+  header.hero { padding: 3rem 0 1.5rem; }
+  header.hero h1 {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 2rem;
+    margin: 0 0 0.75rem;
+  }
+  header.hero p.tag { font-size: 1.15rem; color: var(--muted); max-width: 42rem; margin: 0 0 1rem; }
+  h2 {
+    font-size: 1.5rem;
+    margin: 3rem 0 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  h3 { font-size: 1.15rem; margin: 2rem 0 0.5rem; }
+  h3 code, h2 code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.95em;
+  }
+  p, li { max-width: 46rem; }
+  a { color: var(--accent); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 0.75rem 0 1.25rem;
+  }
+  pre code { background: none; padding: 0; font-size: 0.85rem; }
+  .tablewrap { overflow-x: auto; margin: 0.75rem 0 1.25rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.45rem 0.7rem; text-align: left; vertical-align: top; }
+  th { background: var(--th-bg); font-weight: 600; }
+  td code { white-space: nowrap; }
+  .note {
+    background: var(--note-bg);
+    border-left: 3px solid var(--note-border);
+    border-radius: 0 6px 6px 0;
+    padding: 0.6rem 1rem;
+    margin: 1rem 0;
+    max-width: 46rem;
+  }
+  .note p { margin: 0.25rem 0; }
+  dt { font-weight: 600; margin-top: 1.25rem; max-width: 46rem; }
+  dd { margin: 0.35rem 0 0 0; max-width: 46rem; }
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+    header.hero { padding: 2rem 0 1rem; }
+    header.hero h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav aria-label="Table of contents">
+  <a class="brand" href="#top">limitless-catalog</a>
+  <a href="#quick-start">Quick start</a>
+  <a href="#concepts">Concepts</a>
+  <a href="#commands">Commands</a>
+  <a href="#scheduling">Scheduling</a>
+  <a href="#sql">SQL cookbook</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<main id="top">
+
+<header class="hero">
+  <h1>limitless-catalog</h1>
+  <p class="tag">A single-binary tool that backs up your Limitless Pendant lifelogs
+  into a local, searchable SQLite catalog you own.</p>
+  <p>Your recordings, your transcripts, your machine. Live API access is fine
+  until it isn't: payloads are large, range queries are awkward, and if the
+  service ever winds down, your history goes with it. This tool pulls
+  everything once, keeps it updated incrementally, and makes it instantly
+  queryable offline: fast full-text search, date and meeting-window lookups,
+  and full export to plain markdown or JSON that any tool can read.</p>
+  <p>Not affiliated with Limitless. Built by and for pendant owners who want
+  a durable local archive of their own data.</p>
+</header>
+
+<section id="quick-start">
+<h2>Quick start</h2>
+
+<h3>1. Get an API key</h3>
+<p>In the Limitless app: Settings &gt; Developer &gt; create key. Then export it
+so the tool can find it:</p>
+<pre><code>export LIMITLESS_API_KEY=your-key-here</code></pre>
+<p>(Or pass <code>-api-key</code> per command; the flag wins over the
+environment variable.)</p>
+
+<h3>2. Build</h3>
+<p>With Go 1.25+ installed:</p>
+<pre><code>go build -o limitless-catalog .</code></pre>
+<p>Or cross-compile for any platform (pure Go, no C toolchain needed):</p>
+<pre><code>GOOS=linux  GOARCH=amd64 go build -o dist/limitless-catalog-linux-amd64 .
+GOOS=darwin GOARCH=arm64 go build -o dist/limitless-catalog-darwin-arm64 .
+GOOS=windows GOARCH=amd64 go build -o dist/limitless-catalog-windows-amd64.exe .</code></pre>
+
+<h3>3. See what your account has</h3>
+<pre><code>limitless-catalog span</code></pre>
+
+<h3>4. First backfill</h3>
+<p>Pick a window (all of these are safe to re-run; see
+<a href="#concepts">Concepts</a>):</p>
+<pre><code>limitless-catalog ingest backfill --months 3   # last 3 months
+limitless-catalog ingest backfill --all        # everything</code></pre>
+
+<h3>5. Keep it current</h3>
+<pre><code>limitless-catalog ingest incremental</code></pre>
+<p>Run that daily; see <a href="#scheduling">Scheduling</a> for launchd and
+cron recipes.</p>
+
+<div class="note">
+<p><strong>Flag order matters.</strong> Global flags
+(<code>-db</code>, <code>-timezone</code>, <code>-json</code>,
+<code>-api-key</code>) go <em>before</em> the subcommand, and subcommand
+flags go <em>before</em> positional arguments:</p>
+<p><code>limitless-catalog -json search --limit 5 "budget review"</code></p>
+</div>
+</section>
+
+<section id="concepts">
+<h2>Concepts</h2>
+
+<h3>The local catalog</h3>
+<p>Everything lands in one SQLite file (default <code>limitless.db</code>,
+override with the global <code>-db</code> flag). Each lifelog row keeps the
+title, start and end times in UTC, a local date, duration, speakers, the
+full transcript as markdown, a category, and the raw API JSON. An FTS5
+full-text index over titles and transcripts powers <code>search</code>, and
+it is updated in the same transaction as every row write, so it can never
+drift out of sync.</p>
+
+<h3>Day bucketing and why --timezone matters</h3>
+<p>Lifelogs are fetched from the API one local day at a time, and each record
+is bucketed into a <code>local_date</code>. The same timezone must be used for
+both the fetch window and the bucketing: if they disagree, recordings near
+midnight can fall between two days and be silently skipped, and once a day is
+marked done it will not be refetched. The tool uses your system timezone by
+default (falling back to UTC when the system zone has no IANA name), but on
+servers, in containers, and in schedulers the "system" zone is often not what
+you expect. Pass an explicit IANA zone everywhere that runs unattended:</p>
+<pre><code>limitless-catalog -timezone America/Chicago ingest incremental</code></pre>
+
+<h3>Dedup: safe re-runs</h3>
+<p>Records are keyed by the API's lifelog <code>id</code>. On re-ingest, a row
+whose <code>updatedAt</code> is unchanged is skipped; a changed one is
+rewritten along with its FTS entry. Re-running any ingest over any window is
+always safe and cheap: nothing is duplicated, and only genuinely changed
+records are touched.</p>
+
+<h3>Category heuristic</h3>
+<p>The pendant records background media (TV, podcasts, ads) as well as real
+conversation. A deliberately conservative heuristic tags obvious cases as
+<code>media</code>: if the wearer spoke, the log is never media; otherwise it
+takes two or more distinct broadcast-style markers (phrases like "subscribe",
+"sponsored by", "this episode") in the transcript. Everything else stays
+<code>unknown</code> rather than risk mislabeling, which is why most records
+are <code>unknown</code>.</p>
+
+<h3>Resume machinery</h3>
+<p>Backfills walk their window day by day. Each fully ingested day is recorded
+with a <code>backfill_done:&lt;date&gt;</code> marker in the
+<code>ingest_state</code> table, and marked days are skipped on re-runs, so an
+interrupted backfill picks up where it left off. Today is never marked done
+(it is still being recorded), and <code>ingest incremental</code> always
+re-ingests the last stored day too, since it may have been partial when last
+fetched.</p>
+</section>
+
+<section id="commands">
+<h2>Command reference</h2>
+
+<p>General shape:</p>
+<pre><code>limitless-catalog [global flags] &lt;command&gt; [command flags] [args]</code></pre>
+
+<h3>Global flags</h3>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>-db string</code></td><td><code>limitless.db</code></td><td>Path to the SQLite catalog.</td></tr>
+<tr><td><code>-api-key string</code></td><td><code>$LIMITLESS_API_KEY</code></td><td>Limitless API key (only needed by <code>ingest</code> and <code>span</code>).</td></tr>
+<tr><td><code>-timezone string</code></td><td>system local, or UTC</td><td>IANA timezone for day bucketing and API fetch windows.</td></tr>
+<tr><td><code>-json</code></td><td>off</td><td>Emit JSON instead of text (works with every query command).</td></tr>
+</table>
+</div>
+<p>Global flags always go before the subcommand:
+<code>limitless-catalog -db /backups/pendant.db recent 5</code>.</p>
+
+<h3 id="cmd-ingest"><code>ingest</code></h3>
+<p>Fetch lifelogs from the Limitless API into the local catalog. Three modes:
+<code>backfill</code> for a window, <code>incremental</code> for daily
+top-ups, and <code>--date</code> for a single day.</p>
+
+<p><strong><code>ingest backfill</code></strong> walks a date window day by
+day, marking completed days done so re-runs resume instead of refetching.</p>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>--days N</code></td><td>90</td><td>Fetch the last N days.</td></tr>
+<tr><td><code>--months N</code></td><td>0</td><td>Fetch the last N months (overrides <code>--days</code>).</td></tr>
+<tr><td><code>--all</code></td><td>off</td><td>Everything from the oldest available lifelog to today.</td></tr>
+<tr><td><code>--from-start</code></td><td>off</td><td>Anchor the window at the oldest available lifelog, going forward (combine with <code>--months</code> to cap it).</td></tr>
+<tr><td><code>--start YYYY-MM-DD</code></td><td></td><td>Explicit start date (overrides all other window flags).</td></tr>
+<tr><td><code>--end YYYY-MM-DD</code></td><td>today</td><td>Explicit end date (requires <code>--start</code>).</td></tr>
+</table>
+</div>
+<pre><code>limitless-catalog ingest backfill --months 3
+limitless-catalog ingest backfill --all
+limitless-catalog ingest backfill --from-start --months 6
+limitless-catalog ingest backfill --start 2026-01-01 --end 2026-03-31</code></pre>
+
+<p><strong><code>ingest incremental</code></strong> re-ingests from the last
+stored day through today. No flags. Requires a non-empty catalog (run a
+backfill first). This is the command to schedule.</p>
+<pre><code>limitless-catalog -timezone America/Chicago ingest incremental</code></pre>
+
+<p><strong><code>ingest --date</code></strong> fetches exactly one local day,
+for spot-fixing a gap that <code>stats</code> surfaced.</p>
+<pre><code>limitless-catalog ingest --date 2026-06-14</code></pre>
+
+<h3 id="cmd-span"><code>span</code></h3>
+<p>Show the API's oldest and newest lifelogs versus local coverage, so you can
+see what a backfill would fetch before downloading anything. Needs an API key;
+suggests a backfill command when local coverage is missing or incomplete.</p>
+<pre><code>limitless-catalog span
+limitless-catalog -json span</code></pre>
+
+<h3 id="cmd-search"><code>search</code></h3>
+<p>Full-text search over titles and transcripts (SQLite FTS5 with Porter
+stemming, ranked by relevance).</p>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>--limit N</code></td><td>20</td><td>Maximum results.</td></tr>
+</table>
+</div>
+<pre><code>limitless-catalog search "budget review"
+limitless-catalog -json search --limit 5 "quarterly forecast"</code></pre>
+
+<h3 id="cmd-date"><code>date</code></h3>
+<p>List all logs for one local date. No flags; one positional argument.</p>
+<pre><code>limitless-catalog date 2026-07-06</code></pre>
+
+<h3 id="cmd-range"><code>range</code></h3>
+<p>List logs for an inclusive date range. No flags; two positional
+arguments.</p>
+<pre><code>limitless-catalog range 2026-07-01 2026-07-06</code></pre>
+
+<h3 id="cmd-recent"><code>recent</code></h3>
+<p>List the newest logs. One optional positional count (default 10).</p>
+<pre><code>limitless-catalog recent
+limitless-catalog -json recent 25</code></pre>
+
+<h3 id="cmd-meeting"><code>meeting</code></h3>
+<p>Find logs overlapping a time window, with slack on each side, so a "Q3
+planning" meeting scheduled 13:00 to 14:00 still matches recordings that
+started a few minutes early or ran long. The positional argument is the
+window start.</p>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>--end "YYYY-MM-DD HH:MM"</code></td><td>start + 1h</td><td>Window end.</td></tr>
+<tr><td><code>--buffer N</code></td><td>10</td><td>Minutes of slack on each side.</td></tr>
+</table>
+</div>
+<pre><code>limitless-catalog meeting "2026-07-06 13:00"
+limitless-catalog meeting --end "2026-07-06 14:30" --buffer 15 "2026-07-06 13:00"</code></pre>
+
+<h3 id="cmd-get"><code>get</code></h3>
+<p>Show one log by id (ids appear in every query's output).</p>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>--full</code></td><td>off</td><td>Also print the full transcript.</td></tr>
+</table>
+</div>
+<pre><code>limitless-catalog get AbC123xYz
+limitless-catalog -json get --full AbC123xYz</code></pre>
+<p>A typical pipeline: <code>-json meeting</code> returns ids, then
+<code>get --full</code> pulls each transcript. Handy for assistant workflows
+that debrief a meeting.</p>
+
+<h3 id="cmd-export"><code>export</code></h3>
+<p>Write your archive out as plain files any tool can read: one markdown file
+per lifelog, or a single JSON Lines file (which includes the raw API
+JSON).</p>
+<div class="tablewrap">
+<table>
+<tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>--format md|json</code></td><td><code>md</code></td><td>Markdown files or one <code>lifelogs.jsonl</code>.</td></tr>
+<tr><td><code>--out DIR</code></td><td><code>export</code></td><td>Output directory.</td></tr>
+<tr><td><code>--start YYYY-MM-DD</code></td><td>everything</td><td>Only export from this date.</td></tr>
+<tr><td><code>--end YYYY-MM-DD</code></td><td></td><td>Only export through this date.</td></tr>
+</table>
+</div>
+<pre><code>limitless-catalog export --format md --out export/
+limitless-catalog export --format json --start 2026-06-01 --end 2026-06-30</code></pre>
+
+<h3 id="cmd-stats"><code>stats</code></h3>
+<p>Catalog totals, coverage, hours recorded, database size, last ingest time,
+per-month counts, category breakdown, and any days with zero recordings, so
+you can spot gaps in a backfill. No flags.</p>
+<pre><code>limitless-catalog stats
+limitless-catalog -json stats</code></pre>
+</section>
+
+<section id="scheduling">
+<h2>Scheduling</h2>
+
+<p>Run <code>ingest incremental</code> once a day.
+<strong>Always pass an explicit <code>-timezone</code>:</strong> launchd and
+cron jobs frequently run with a different (or missing) system timezone, and a
+mismatch between the fetch window and day bucketing can silently skip
+edge-of-day recordings (see
+<a href="#concepts">Day bucketing</a>).</p>
+
+<h3>macOS launchd</h3>
+<p>Save as <code>~/Library/LaunchAgents/com.limitless-catalog.plist</code>,
+then <code>launchctl load ~/Library/LaunchAgents/com.limitless-catalog.plist</code>:</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.limitless-catalog&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;&lt;array&gt;
+    &lt;string&gt;/usr/local/bin/limitless-catalog&lt;/string&gt;
+    &lt;string&gt;-timezone&lt;/string&gt;&lt;string&gt;America/Chicago&lt;/string&gt;
+    &lt;string&gt;ingest&lt;/string&gt;&lt;string&gt;incremental&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;EnvironmentVariables&lt;/key&gt;&lt;dict&gt;
+    &lt;key&gt;LIMITLESS_API_KEY&lt;/key&gt;&lt;string&gt;your-key-here&lt;/string&gt;
+  &lt;/dict&gt;
+  &lt;key&gt;StartCalendarInterval&lt;/key&gt;&lt;dict&gt;
+    &lt;key&gt;Hour&lt;/key&gt;&lt;integer&gt;6&lt;/integer&gt;&lt;key&gt;Minute&lt;/key&gt;&lt;integer&gt;30&lt;/integer&gt;
+  &lt;/dict&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/path/to/your/catalog&lt;/string&gt;
+&lt;/dict&gt;&lt;/plist&gt;</code></pre>
+
+<h3>Linux cron</h3>
+<pre><code>30 6 * * * cd /path/to/catalog && LIMITLESS_API_KEY=your-key ./limitless-catalog -timezone America/Chicago ingest incremental</code></pre>
+</section>
+
+<section id="sql">
+<h2>Direct SQL cookbook</h2>
+
+<p>The catalog is plain SQLite with an FTS5 index; query it from anything.
+Read freely, but write only through the app: the app updates the FTS index in
+the same transaction as every row write, and out-of-band writes would leave
+the index stale.</p>
+
+<p>Recent titles:</p>
+<pre><code>sqlite3 limitless.db "SELECT local_date, title FROM lifelogs ORDER BY start_utc DESC LIMIT 10"</code></pre>
+
+<p>Full-text search with relevance ranking:</p>
+<pre><code>sqlite3 limitless.db "SELECT l.local_date, l.title
+FROM lifelogs_fts f JOIN lifelogs l ON l.id = f.id
+WHERE lifelogs_fts MATCH 'budget review' ORDER BY rank LIMIT 10"</code></pre>
+
+<p>Talk time per month:</p>
+<pre><code>sqlite3 limitless.db "SELECT substr(local_date, 1, 7) AS month,
+ROUND(SUM(duration_min) / 60.0, 1) AS hours, COUNT(*) AS logs
+FROM lifelogs GROUP BY month ORDER BY month"</code></pre>
+
+<p>Who you talk with most (the <code>speakers</code> column is a JSON array of
+names):</p>
+<pre><code>sqlite3 limitless.db "SELECT je.value AS speaker, COUNT(*) AS logs
+FROM lifelogs, json_each(lifelogs.speakers) je
+GROUP BY speaker ORDER BY logs DESC LIMIT 10"</code></pre>
+
+<p>Context around a gap day (what surrounds a date <code>stats</code> flagged
+as empty):</p>
+<pre><code>sqlite3 limitless.db "SELECT local_date, COUNT(*) AS logs, ROUND(SUM(duration_min), 0) AS minutes
+FROM lifelogs WHERE local_date BETWEEN '2026-06-12' AND '2026-06-16'
+GROUP BY local_date ORDER BY local_date"</code></pre>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<dl>
+
+<dt>Will I hit API rate limits?</dt>
+<dd>The Limitless API allows 180 requests per minute. The client honors
+<code>Retry-After</code> headers and backs off automatically, so even a full
+<code>--all</code> backfill just slows down instead of failing.</dd>
+
+<dt>Why are most records category <code>unknown</code>?</dt>
+<dd>By design. The media heuristic is conservative: a log where the wearer
+spoke is never tagged media, and otherwise it takes two distinct
+broadcast-style phrases to earn the <code>media</code> tag. Anything
+ambiguous stays <code>unknown</code> rather than risk mislabeling a real
+conversation.</dd>
+
+<dt>My account has records with absurd timestamps. Will they break backfill?</dt>
+<dd>Some accounts contain corrupted lifelogs with epoch-zero (1970)
+startTimes. The oldest-lifelog anchor used by <code>span</code> and by
+<code>backfill --all</code> / <code>--from-start</code> ignores anything
+before 2013 and anchors at the first plausible record instead, so a
+corrupted record cannot make a backfill walk twenty thousand empty days.</dd>
+
+<dt>How big does the database get?</dt>
+<dd>Roughly 60-70 KB per recording, including the full transcript, the FTS
+index, and a verbatim copy of the raw API JSON. A year of heavy pendant use
+typically lands in the low hundreds of megabytes.</dd>
+
+<dt>Is my API key or data ever sent anywhere?</dt>
+<dd>No. The key is sent only to <code>api.limitless.ai</code> to fetch your
+own lifelogs, and everything fetched stays in the local SQLite file. There is
+no telemetry, no analytics, and no third-party service of any kind.</dd>
+
+<dt>How do I back up the catalog?</dt>
+<dd>Copy the <code>.db</code> file together with its <code>-wal</code> and
+<code>-shm</code> siblings while the tool is not running. Or checkpoint
+first (<code>sqlite3 limitless.db "PRAGMA wal_checkpoint(TRUNCATE)"</code>)
+and copy just the <code>.db</code>. <code>export --format json</code> is
+also a complete, tool-independent backup.</dd>
+
+</dl>
+</section>
+
+<footer>
+<p>MIT licensed. Not affiliated with Limitless.
+Source: <a href="https://github.com/CLarkin-Arcalea/limitless-catalog">github.com/CLarkin-Arcalea/limitless-catalog</a></p>
+</footer>
+
+</main>
+</body>
+</html>

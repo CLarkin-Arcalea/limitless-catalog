@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "limitless-catalog"
+type: software
+authors:
+  - family-names: "Larkin"
+    given-names: "Christopher"
+license: MIT
+repository-code: "https://github.com/CLarkin-Arcalea/limitless-catalog"
+abstract: "Archive your Limitless Pendant lifelogs in a local SQLite catalog with full-text search. Search, export, and truly own your recordings."
