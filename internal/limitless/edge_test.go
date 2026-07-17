@@ -54,6 +54,22 @@ func TestFetchFirstSendsStart(t *testing.T) {
 	}
 }
 
+func TestFetchPageExported(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("cursor") != "c9" {
+			t.Errorf("cursor = %q, want c9", r.URL.Query().Get("cursor"))
+		}
+		fmt.Fprint(w, pageBody(t, []string{"p1", "p2"}, "c10"))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "k")
+	logs, next, err := c.FetchPage(context.Background(), ListParams{Direction: "asc"}, "c9")
+	if err != nil || len(logs) != 2 || next != "c10" {
+		t.Errorf("logs=%d next=%q err=%v", len(logs), next, err)
+	}
+}
+
 func TestFetchEdgeEmptyAccount(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, pageBody(t, nil, ""))

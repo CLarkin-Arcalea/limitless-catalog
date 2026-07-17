@@ -24,6 +24,7 @@ func (a *ingestStats) add(b ingestStats) {
 // cmdIngest handles: ingest backfill [--days N | --months N | --all | --from-start [--months N] | --start D --end D]
 //
 //	ingest incremental
+//	ingest orphans
 //	ingest --date YYYY-MM-DD
 func cmdIngest(cfg config, args []string) error {
 	if cfg.apiKey == "" {
@@ -41,7 +42,7 @@ func cmdIngest(cfg config, args []string) error {
 	today := time.Now().In(cfg.loc).Format("2006-01-02")
 
 	mode := ""
-	if len(args) > 0 && (args[0] == "backfill" || args[0] == "incremental") {
+	if len(args) > 0 && (args[0] == "backfill" || args[0] == "incremental" || args[0] == "orphans") {
 		mode, args = args[0], args[1:]
 	}
 
@@ -75,12 +76,81 @@ func cmdIngest(cfg config, args []string) error {
 		// Re-ingest the last stored day too: it may have been partial.
 		return ingestRange(ctx, client, st, cfg, last, today, today, false)
 
+	case "orphans":
+		// Records with corrupted (epoch-era) startTimes never appear in
+		// any date-window query, so a date backfill can never fetch them.
+		// Walk the undated ascending listing, ingesting every pre-floor
+		// record through Build's repair path, and stop at the first sane
+		// record (everything after it is reachable by normal backfill).
+		var stats ingestStats
+		cursor := ""
+		for {
+			logs, next, err := client.FetchPage(ctx, limitless.ListParams{Direction: "asc"}, cursor)
+			if err != nil {
+				return err
+			}
+			done := false
+			for _, l := range logs {
+				if s, ok := saneStart(l.StartTime); ok && s >= catalog.SaneFloor {
+					done = true
+					break
+				}
+				rec, err := catalog.Build(l, cfg.loc)
+				if err != nil {
+					fmt.Printf("skip %s: %v\n", l.ID, err)
+					continue
+				}
+				res, err := st.Upsert(rec)
+				if err != nil {
+					return err
+				}
+				switch res {
+				case store.Inserted:
+					stats.Inserted++
+				case store.Updated:
+					stats.Updated++
+				case store.Skipped:
+					stats.Skipped++
+				}
+			}
+			if done || next == "" {
+				break
+			}
+			cursor = next
+		}
+		if err := st.SetState("last_ingest_run", time.Now().UTC().Format(time.RFC3339)); err != nil {
+			return err
+		}
+		fmt.Printf("orphans: %d inserted, %d updated, %d skipped\n",
+			stats.Inserted, stats.Updated, stats.Skipped)
+		return nil
+
 	default:
 		fs := flag.NewFlagSet("ingest", flag.ExitOnError)
 		date := fs.String("date", "", "single date YYYY-MM-DD")
+		id := fs.String("id", "", "single lifelog id to fetch and ingest")
 		fs.Parse(args)
+		if *id != "" {
+			l, err := client.GetLifelog(ctx, *id)
+			if err != nil {
+				return err
+			}
+			rec, err := catalog.Build(*l, cfg.loc)
+			if err != nil {
+				return err
+			}
+			res, err := st.Upsert(rec)
+			if err != nil {
+				return err
+			}
+			if err := st.SetState("last_ingest_run", time.Now().UTC().Format(time.RFC3339)); err != nil {
+				return err
+			}
+			fmt.Printf("%s: %s (%s, %s)\n", *id, res, rec.LocalDate, rec.Title)
+			return nil
+		}
 		if *date == "" {
-			return fmt.Errorf("usage: ingest backfill [--days N | --months N | --all | --from-start [--months N] | --start D --end D] | ingest incremental | ingest --date D")
+			return fmt.Errorf("usage: ingest backfill [--days N | --months N | --all | --from-start [--months N] | --start D --end D] | ingest incremental | ingest orphans | ingest --date D | ingest --id ID")
 		}
 		stats, err := ingestDate(ctx, client, st, cfg, *date)
 		if err != nil {
@@ -93,6 +163,15 @@ func cmdIngest(cfg config, args []string) error {
 			*date, stats.Inserted, stats.Updated, stats.Skipped)
 		return nil
 	}
+}
+
+// saneStart reports the YYYY-MM-DD of s when it parses, for floor checks.
+func saneStart(s string) (string, bool) {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return "", false
+	}
+	return t.UTC().Format("2006-01-02"), true
 }
 
 // ingestRange walks [startDate, endDate] day by day. With markDone, days

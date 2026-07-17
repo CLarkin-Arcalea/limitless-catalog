@@ -52,12 +52,23 @@ func DurationMinutes(start, end time.Time) float64 {
 // local_date in loc.
 func Build(l limitless.Lifelog, loc *time.Location) (Record, error) {
 	startStr, startT, err := NormalizeUTC(l.StartTime)
-	if err != nil {
-		return Record{}, fmt.Errorf("lifelog %s start: %w", l.ID, err)
+	if err != nil || startStr < SaneFloor {
+		// Corrupted or missing start: repair from content nodes / end.
+		repaired, ok := repairStart(l)
+		if !ok {
+			return Record{}, fmt.Errorf("lifelog %s: no usable timestamp (start %q)", l.ID, l.StartTime)
+		}
+		startT = repaired.UTC()
+		startStr = startT.Format(time.RFC3339)
 	}
 	endStr, endT, err := NormalizeUTC(l.EndTime)
-	if err != nil {
-		return Record{}, fmt.Errorf("lifelog %s end: %w", l.ID, err)
+	if err != nil || endStr < SaneFloor {
+		// End unusable/corrupted but start recovered: store a point-in-time record.
+		endStr, endT = startStr, startT
+	}
+	duration := DurationMinutes(startT, endT)
+	if duration < 0 {
+		duration = 0
 	}
 	updated := l.UpdatedAt
 	if norm, _, err := NormalizeUTC(l.UpdatedAt); err == nil {
@@ -78,7 +89,7 @@ func Build(l limitless.Lifelog, loc *time.Location) (Record, error) {
 		EndUTC:       endStr,
 		LocalDate:    LocalDate(startT, loc),
 		Title:        l.Title,
-		DurationMin:  DurationMinutes(startT, endT),
+		DurationMin:  duration,
 		IsStarred:    l.IsStarred,
 		UpdatedAt:    updated,
 		Speakers:     speakers,

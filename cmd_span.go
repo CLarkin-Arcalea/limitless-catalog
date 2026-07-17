@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/CLarkin-Arcalea/limitless-catalog/internal/catalog"
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/limitless"
 )
 
@@ -57,12 +58,6 @@ func resolveBackfillWindow(all, fromStart bool, months, days int,
 	return t.AddDate(0, 0, -days).Format("2006-01-02"), today, nil
 }
 
-// saneOldestFloor guards against corrupted lifelogs: real accounts have
-// been observed with epoch-zero startTimes, which would anchor --all /
-// --from-start at 1970 and walk ~20,000 empty days. Nothing real predates
-// the pendant era, so anything before this floor is refetched past.
-const saneOldestFloor = "2013-01-01"
-
 // saneOldestEdge returns the account's oldest lifelog with a plausible
 // startTime, skipping corrupted epoch-era records. nil when the account
 // has no plausible lifelogs.
@@ -72,12 +67,12 @@ func saneOldestEdge(ctx context.Context, client *limitless.Client) (*limitless.L
 		return edge, err
 	}
 	t, err := time.Parse(time.RFC3339, edge.StartTime)
-	if err == nil && t.Format("2006-01-02") >= saneOldestFloor {
+	if err == nil && t.Format("2006-01-02") >= catalog.SaneFloor {
 		return edge, nil
 	}
 	// Corrupted or unparseable timestamp: ask for the first lifelog at or
 	// after the floor instead.
-	return client.FetchFirst(ctx, limitless.ListParams{Direction: "asc", Start: saneOldestFloor})
+	return client.FetchFirst(ctx, limitless.ListParams{Direction: "asc", Start: catalog.SaneFloor})
 }
 
 // oldestLocalDate fetches the account's oldest lifelog and buckets its
