@@ -57,3 +57,32 @@ func TestOpenIsIdempotent(t *testing.T) {
 	}
 	s2.Close()
 }
+
+func TestOpenReadOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ro.db")
+	s, err := Open(path) // create + init
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	ro, err := OpenReadOnly(path)
+	if err != nil {
+		t.Fatalf("OpenReadOnly: %v", err)
+	}
+	defer ro.Close()
+
+	if _, err := ro.DB().Exec(`INSERT INTO ingest_state (key, value) VALUES ('x','y')`); err == nil {
+		t.Error("write on read-only handle must fail")
+	}
+	var n int
+	if err := ro.DB().QueryRow(`SELECT COUNT(*) FROM lifelogs`).Scan(&n); err != nil {
+		t.Errorf("read on read-only handle: %v", err)
+	}
+}
+
+func TestOpenReadOnlyMissingDB(t *testing.T) {
+	if _, err := OpenReadOnly(filepath.Join(t.TempDir(), "absent.db")); err == nil {
+		t.Fatal("want error for missing catalog")
+	}
+}

@@ -150,6 +150,7 @@
   <a href="#commands">Commands</a>
   <a href="#scheduling">Scheduling</a>
   <a href="#sql">SQL cookbook</a>
+  <a href="#mcp">AI assistants (MCP)</a>
   <a href="#faq">FAQ</a>
 </nav>
 
@@ -479,6 +480,29 @@ as empty):</p>
 <pre><code>sqlite3 limitless.db "SELECT local_date, COUNT(*) AS logs, ROUND(SUM(duration_min), 0) AS minutes
 FROM lifelogs WHERE local_date BETWEEN '2026-06-12' AND '2026-06-16'
 GROUP BY local_date ORDER BY local_date"</code></pre>
+</section>
+
+<section id="mcp">
+<h2>AI assistants (MCP)</h2>
+
+<p>The catalog speaks the Model Context Protocol over stdio, read-only. Any
+MCP client (Claude Code, Claude Desktop, and others) can search and read
+your archive; nothing can write to it or trigger network fetches.</p>
+
+<p>Claude Code:</p>
+<pre><code>claude mcp add limitless-catalog -- /path/to/limitless-catalog -db /path/to/limitless.db -timezone America/Chicago mcp</code></pre>
+
+<p>Tools exposed: <code>search_transcripts</code>, <code>find_meeting</code>,
+<code>list_by_date</code>, <code>list_range</code>, <code>recent</code>,
+<code>get_transcript</code>, <code>catalog_stats</code>.</p>
+
+<div class="note">
+<p><strong>Read-only by design.</strong> The MCP server opens the database
+with SQLite's read-only mode (<code>mode=ro</code>), so no tool call can
+modify your archive, and it deliberately exposes no ingest or export tools:
+an assistant can look things up, but only you (or your scheduler) decide
+when to fetch from the API or write files to disk.</p>
+</div>
 </section>
 
 <section id="faq">
