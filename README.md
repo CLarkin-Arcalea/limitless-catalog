@@ -137,6 +137,19 @@ Example: an assistant workflow that debriefs a 1pm meeting can run
 `limitless-catalog -json meeting "2026-07-06 13:00"`, take the returned
 ids, and `limitless-catalog get --full <id>` for the transcript.
 
+## Serve to AI assistants (MCP)
+
+The catalog speaks the Model Context Protocol over stdio, read-only. Any
+MCP client (Claude Code, Claude Desktop, and others) can search and read
+your archive; nothing can write to it or trigger network fetches.
+
+Claude Code:
+
+    claude mcp add limitless-catalog -- /path/to/limitless-catalog -db /path/to/limitless.db -timezone America/Chicago mcp
+
+Tools exposed: search_transcripts, find_meeting, list_by_date, list_range,
+recent, get_transcript, catalog_stats.
+
 ## Notes
 
 - The pendant records background media (TV, podcasts). A conservative
