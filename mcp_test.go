@@ -37,6 +37,79 @@ func seedMain(t *testing.T) string {
 	return path
 }
 
+func handlersForTest(t *testing.T) mcpHandlers {
+	t.Helper()
+	path := seedMain(t)
+	ro, err := store.OpenReadOnly(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ro.Close() })
+	return mcpHandlers{s: ro, loc: time.UTC, dbPath: path}
+}
+
+func TestSearchHandler(t *testing.T) {
+	h := handlersForTest(t)
+	out, err := h.search(searchArgs{Query: "budget"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Results) != 1 || out.Results[0].ID != "m1" {
+		t.Errorf("got %+v", out)
+	}
+	if out.Results[0].Snippet == "" {
+		t.Error("want snippet")
+	}
+}
+
+func TestMeetingHandler(t *testing.T) {
+	h := handlersForTest(t)
+	out, err := h.meeting(meetingArgs{Start: "2026-07-06 18:15", End: "2026-07-06 18:40"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Results) != 1 || out.Results[0].ID != "m2" {
+		t.Errorf("got %+v", out)
+	}
+	if _, err := h.meeting(meetingArgs{Start: "not a time"}); err == nil {
+		t.Error("want error for bad datetime")
+	}
+}
+
+func TestListAndRecentHandlers(t *testing.T) {
+	h := handlersForTest(t)
+	if out, err := h.byDate(dateArgs{Date: "2026-07-05"}); err != nil || len(out.Results) != 1 {
+		t.Errorf("byDate: %v %+v", err, out)
+	}
+	if out, err := h.byRange(rangeArgs{StartDate: "2026-07-05", EndDate: "2026-07-06"}); err != nil || len(out.Results) != 2 {
+		t.Errorf("byRange: %v %+v", err, out)
+	}
+	if out, err := h.recent(recentArgs{Count: 1}); err != nil || len(out.Results) != 1 || out.Results[0].ID != "m2" {
+		t.Errorf("recent: %v %+v", err, out)
+	}
+}
+
+func TestGetTranscriptHandler(t *testing.T) {
+	h := handlersForTest(t)
+	out, err := h.getTranscript(getArgs{ID: "m1", Full: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Title != "Budget review" || out.TranscriptMD == "" {
+		t.Errorf("got %+v", out)
+	}
+	meta, err := h.getTranscript(getArgs{ID: "m1", Full: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.TranscriptMD != "" {
+		t.Error("full=false must omit transcript text")
+	}
+	if _, err := h.getTranscript(getArgs{ID: "nope"}); err == nil {
+		t.Error("want error for unknown id")
+	}
+}
+
 func TestStatsHandler(t *testing.T) {
 	path := seedMain(t)
 	ro, err := store.OpenReadOnly(path)
