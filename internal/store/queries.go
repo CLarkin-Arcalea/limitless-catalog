@@ -37,9 +37,11 @@ const rowCols = `id, local_date, title, start_utc, end_utc,
 	duration_min, speakers, category, is_starred`
 
 // qualifiedRowCols returns rowCols with each column prefixed by alias+".",
-// for queries that join lifelogs and would otherwise be ambiguous.
+// for queries that join lifelogs and would otherwise be ambiguous. Splits on
+// "," alone (not ", ") and trims whitespace per column, so this holds
+// regardless of how rowCols is line-wrapped.
 func qualifiedRowCols(alias string) string {
-	cols := strings.Split(rowCols, ", ")
+	cols := strings.Split(rowCols, ",")
 	for i, c := range cols {
 		cols[i] = alias + "." + strings.TrimSpace(c)
 	}
