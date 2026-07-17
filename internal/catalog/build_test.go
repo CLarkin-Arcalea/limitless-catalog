@@ -92,10 +92,17 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsBadTimes(t *testing.T) {
+func TestBuildRepairsGarbageStartViaEndTime(t *testing.T) {
 	l := speakerLog()
 	l.StartTime = "garbage"
-	if _, err := Build(l, time.UTC); err == nil {
-		t.Fatal("want error for unparseable startTime")
+	r, err := Build(l, time.UTC)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if r.StartUTC != r.EndUTC {
+		t.Errorf("StartUTC = %q, want repaired to EndUTC %q", r.StartUTC, r.EndUTC)
+	}
+	if r.DurationMin != 0 {
+		t.Errorf("DurationMin = %v, want 0", r.DurationMin)
 	}
 }
