@@ -279,9 +279,11 @@ fetched.</p>
 <code>limitless-catalog -db /backups/pendant.db recent 5</code>.</p>
 
 <h3 id="cmd-ingest"><code>ingest</code></h3>
-<p>Fetch lifelogs from the Limitless API into the local catalog. Three modes:
+<p>Fetch lifelogs from the Limitless API into the local catalog. Five modes:
 <code>backfill</code> for a window, <code>incremental</code> for daily
-top-ups, and <code>--date</code> for a single day.</p>
+top-ups, <code>orphans</code> for records with corrupted timestamps,
+<code>--date</code> for a single day, and <code>--id</code> for a single
+record.</p>
 
 <p><strong><code>ingest backfill</code></strong> walks a date window day by
 day, marking completed days done so re-runs resume instead of refetching.</p>
@@ -309,6 +311,17 @@ backfill first). This is the command to schedule.</p>
 <p><strong><code>ingest --date</code></strong> fetches exactly one local day,
 for spot-fixing a gap that <code>stats</code> surfaced.</p>
 <pre><code>limitless-catalog ingest --date 2026-06-14</code></pre>
+
+<p><strong><code>ingest orphans</code></strong> rescues records with
+corrupted (epoch-zero) startTimes, which no date query can reach. It walks
+the account's oldest records, ingests every corrupted one with its real
+start time recovered from the transcript's own line timestamps where
+possible, and stops at the first record with a plausible date.</p>
+<pre><code>limitless-catalog ingest orphans</code></pre>
+
+<p><strong><code>ingest --id</code></strong> fetches exactly one lifelog by
+its API id, for spot-fixing a single record.</p>
+<pre><code>limitless-catalog ingest --id &lt;lifelog-id&gt;</code></pre>
 
 <h3 id="cmd-span"><code>span</code></h3>
 <p>Show the API's oldest and newest lifelogs versus local coverage, so you can
@@ -487,7 +500,10 @@ conversation.</dd>
 startTimes. The oldest-lifelog anchor used by <code>span</code> and by
 <code>backfill --all</code> / <code>--from-start</code> ignores anything
 before 2013 and anchors at the first plausible record instead, so a
-corrupted record cannot make a backfill walk twenty thousand empty days.</dd>
+corrupted record cannot make a backfill walk twenty thousand empty days.
+To catalog the corrupted records themselves, run
+<code>ingest orphans</code>: it sweeps them in directly, repairing each
+start time from the transcript's own line timestamps where possible.</dd>
 
 <dt>How big does the database get?</dt>
 <dd>Roughly 60-70 KB per recording, including the full transcript, the FTS

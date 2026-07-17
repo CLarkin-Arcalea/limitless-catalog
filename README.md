@@ -56,6 +56,16 @@ First backfill (pick a window):
     limitless-catalog ingest backfill --days 90         # or by days
     limitless-catalog ingest backfill --start 2026-01-01 --end 2026-03-31
 
+Rescue records with corrupted timestamps (rare; some accounts have
+lifelogs whose start time was recorded as the Unix epoch, which no date
+query can reach):
+
+    limitless-catalog ingest orphans
+    limitless-catalog ingest --id <lifelog-id>
+
+Orphaned records get their real start time recovered from the
+transcript's own line timestamps where possible.
+
 Keep it current (run this daily; see Scheduling below):
 
     limitless-catalog ingest incremental

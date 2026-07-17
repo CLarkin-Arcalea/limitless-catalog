@@ -15,6 +15,12 @@ func (c *Client) FetchFirst(ctx context.Context, p ListParams) (*Lifelog, error)
 	return &logs[0], nil
 }
 
+// FetchPage fetches one page matching p at the given cursor, returning
+// the page's lifelogs and the next cursor (empty when exhausted).
+func (c *Client) FetchPage(ctx context.Context, p ListParams, cursor string) ([]Lifelog, string, error) {
+	return c.fetchPage(ctx, p, cursor)
+}
+
 // FetchEdge returns the single oldest (direction "asc") or newest
 // (direction "desc") lifelog the account has, or nil when there are none.
 func (c *Client) FetchEdge(ctx context.Context, direction string) (*Lifelog, error) {

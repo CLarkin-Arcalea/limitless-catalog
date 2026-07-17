@@ -158,6 +158,69 @@ func TestIngestByID(t *testing.T) {
 	}
 }
 
+func TestIngestOrphans(t *testing.T) {
+	page := func(logs []map[string]any, next string) string {
+		body, _ := json.Marshal(map[string]any{
+			"data": map[string]any{"lifelogs": logs},
+			"meta": map[string]any{"lifelogs": map[string]any{"nextCursor": next, "count": len(logs)}},
+		})
+		return string(body)
+	}
+	orphan := func(id, start string) map[string]any {
+		return map[string]any{
+			"id": id, "title": "t-" + id,
+			"markdown":  "# t-" + id + "\n\n**Ava:** orphan content",
+			"startTime": start, "endTime": "2025-09-25T21:14:59Z",
+			"updatedAt": "2025-09-25T22:00:00Z",
+		}
+	}
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		switch r.URL.Query().Get("cursor") {
+		case "":
+			fmt.Fprint(w, page([]map[string]any{
+				orphan("orph1", "1970-01-01T00:00:00Z"),
+				orphan("orph2", "1970-01-01T00:00:07Z"),
+			}, "c2"))
+		case "c2":
+			fmt.Fprint(w, page([]map[string]any{
+				orphan("sane1", "2025-03-10T17:23:46Z"), // sane: sweep must stop here
+			}, "c3"))
+		default:
+			t.Errorf("sweep did not stop at first sane record (cursor %q)", r.URL.Query().Get("cursor"))
+			fmt.Fprint(w, page(nil, ""))
+		}
+	}))
+	defer srv.Close()
+	cfg := testCfg(t, srv.URL)
+
+	if err := cmdIngest(cfg, []string{"orphans"}); err != nil {
+		t.Fatalf("orphans: %v", err)
+	}
+	s, err := store.Open(cfg.dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, id := range []string{"orph1", "orph2"} {
+		fr, err := s.Get(id)
+		if err != nil || fr == nil {
+			t.Errorf("orphan %s not ingested", id)
+			continue
+		}
+		if fr.LocalDate != "2025-09-25" {
+			t.Errorf("orphan %s local_date = %q, want repaired 2025-09-25", id, fr.LocalDate)
+		}
+	}
+	if fr, _ := s.Get("sane1"); fr != nil {
+		t.Error("sane record must NOT be ingested by the orphan sweep")
+	}
+	if calls != 2 {
+		t.Errorf("made %d page calls, want 2 (stop at first sane)", calls)
+	}
+}
+
 func TestIngestIncrementalNeedsData(t *testing.T) {
 	var reqs []string
 	srv := fakeAPI(t, &reqs)
