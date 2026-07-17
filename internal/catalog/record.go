@@ -62,8 +62,8 @@ func Build(l limitless.Lifelog, loc *time.Location) (Record, error) {
 		startStr = startT.Format(time.RFC3339)
 	}
 	endStr, endT, err := NormalizeUTC(l.EndTime)
-	if err != nil {
-		// End unusable but start recovered: store a point-in-time record.
+	if err != nil || endStr < SaneFloor {
+		// End unusable/corrupted but start recovered: store a point-in-time record.
 		endStr, endT = startStr, startT
 	}
 	duration := DurationMinutes(startT, endT)

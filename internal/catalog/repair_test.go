@@ -74,6 +74,22 @@ func TestBuildUnrecoverableStillErrors(t *testing.T) {
 	}
 }
 
+func TestBuildRepairsPreFloorEndTime(t *testing.T) {
+	l := corruptedLog()
+	l.StartTime = "2025-09-25T20:57:39Z" // sane start
+	l.EndTime = "1970-01-01T00:00:00Z"   // corrupted end
+	r, err := Build(l, time.UTC)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if r.EndUTC != "2025-09-25T20:57:39Z" {
+		t.Errorf("EndUTC = %q, want point-in-time fallback to start", r.EndUTC)
+	}
+	if r.DurationMin != 0 {
+		t.Errorf("DurationMin = %v, want 0", r.DurationMin)
+	}
+}
+
 func TestBuildPreFloorContentNodeIgnored(t *testing.T) {
 	l := corruptedLog()
 	// A content node that is itself pre-floor garbage must be skipped in
