@@ -396,10 +396,12 @@ JSON).</p>
 <tr><td><code>--out DIR</code></td><td><code>export</code></td><td>Output directory.</td></tr>
 <tr><td><code>--start YYYY-MM-DD</code></td><td>everything</td><td>Only export from this date.</td></tr>
 <tr><td><code>--end YYYY-MM-DD</code></td><td></td><td>Only export through this date.</td></tr>
+<tr><td><code>--search TERM</code></td><td></td><td>Only export conversations matching this phrase.</td></tr>
 </table>
 </div>
 <pre><code>limitless-catalog export --format md --out export/
-limitless-catalog export --format json --start 2026-06-01 --end 2026-06-30</code></pre>
+limitless-catalog export --format json --start 2026-06-01 --end 2026-06-30
+limitless-catalog export --search "budget review" --format md --out export-budget/</code></pre>
 
 <h3 id="cmd-stats"><code>stats</code></h3>
 <p>Catalog totals, coverage, hours recorded, database size, last ingest time,

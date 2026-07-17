@@ -1,11 +1,25 @@
 package store
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/catalog"
 )
+
+func TestQualifiedRowColsQualifiesEveryColumn(t *testing.T) {
+	out := qualifiedRowCols("l")
+	for _, col := range strings.Split(out, ",") {
+		c := strings.TrimSpace(col)
+		if !strings.HasPrefix(c, "l.") {
+			t.Errorf("column %q not qualified", c)
+		}
+	}
+	if !strings.Contains(out, "l.duration_min") {
+		t.Error("duration_min must be qualified (the line-wrapped column)")
+	}
+}
 
 // seed inserts three lifelogs across two days.
 func seed(t *testing.T, s *Store) {

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/CLarkin-Arcalea/limitless-catalog/internal/store"
 )
 
 func cmdExport(cfg config, args []string) error {
@@ -14,6 +16,7 @@ func cmdExport(cfg config, args []string) error {
 	outDir := fs.String("out", "export", "output directory (md) or file prefix (json)")
 	start := fs.String("start", "", "start date YYYY-MM-DD (default: everything)")
 	end := fs.String("end", "", "end date YYYY-MM-DD")
+	search := fs.String("search", "", "export only conversations matching this phrase")
 	fs.Parse(args)
 
 	s, err := openStore(cfg)
@@ -22,7 +25,12 @@ func cmdExport(cfg config, args []string) error {
 	}
 	defer s.Close()
 
-	recs, err := s.ExportRecords(*start, *end)
+	var recs []store.FullRecord
+	if *search != "" {
+		recs, err = s.ExportRecordsMatching(*search, *start, *end)
+	} else {
+		recs, err = s.ExportRecords(*start, *end)
+	}
 	if err != nil {
 		return err
 	}
