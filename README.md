@@ -161,6 +161,9 @@ recent, get_transcript, catalog_stats.
 - Some accounts contain corrupted lifelogs with epoch-zero timestamps; the
   oldest-lifelog anchor used by span and backfill --all/--from-start ignores
   anything before 2013 and refetches from there.
+- Note that rescuing an old orphaned record extends the catalog's coverage
+  range backward, so stats may report many empty days between it and your
+  continuous history; those days are truthful (no recordings) and harmless.
 
 ## License
 

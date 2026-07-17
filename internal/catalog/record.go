@@ -66,6 +66,11 @@ func Build(l limitless.Lifelog, loc *time.Location) (Record, error) {
 		// End unusable/corrupted but start recovered: store a point-in-time record.
 		endStr, endT = startStr, startT
 	}
+	if endT.Before(startT) {
+		// A repaired start can land after a sane parsed end; never store an
+		// inverted interval, clamp to a point-in-time record instead.
+		endStr, endT = startStr, startT
+	}
 	duration := DurationMinutes(startT, endT)
 	if duration < 0 {
 		duration = 0

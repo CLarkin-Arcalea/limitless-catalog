@@ -529,7 +529,11 @@ before 2013 and anchors at the first plausible record instead, so a
 corrupted record cannot make a backfill walk twenty thousand empty days.
 To catalog the corrupted records themselves, run
 <code>ingest orphans</code>: it sweeps them in directly, repairing each
-start time from the transcript's own line timestamps where possible.</dd>
+start time from the transcript's own line timestamps where possible.
+Note that rescuing an old orphaned record extends the catalog's coverage
+range backward, so stats may report many empty days between it and your
+continuous history; those days are truthful (no recordings) and
+harmless.</dd>
 
 <dt>How big does the database get?</dt>
 <dd>Roughly 60-70 KB per recording, including the full transcript, the FTS

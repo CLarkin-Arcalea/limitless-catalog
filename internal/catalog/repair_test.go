@@ -90,6 +90,22 @@ func TestBuildRepairsPreFloorEndTime(t *testing.T) {
 	}
 }
 
+func TestBuildClampsEndBeforeRepairedStart(t *testing.T) {
+	l := corruptedLog()
+	// Sane end that precedes the repaired content-node start (20:57:39Z).
+	l.EndTime = "2025-09-25T20:00:00Z"
+	r, err := Build(l, time.UTC)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if r.EndUTC != r.StartUTC {
+		t.Errorf("EndUTC = %q, want clamped to StartUTC %q", r.EndUTC, r.StartUTC)
+	}
+	if r.DurationMin != 0 {
+		t.Errorf("DurationMin = %v, want 0", r.DurationMin)
+	}
+}
+
 func TestBuildPreFloorContentNodeIgnored(t *testing.T) {
 	l := corruptedLog()
 	// A content node that is itself pre-floor garbage must be skipped in

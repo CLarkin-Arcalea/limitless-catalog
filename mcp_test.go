@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/catalog"
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/store"
@@ -107,6 +111,57 @@ func TestGetTranscriptHandler(t *testing.T) {
 	}
 	if _, err := h.getTranscript(getArgs{ID: "nope"}); err == nil {
 		t.Error("want error for unknown id")
+	}
+}
+
+func TestNewMCPServerRegistersAllTools(t *testing.T) {
+	path := seedMain(t)
+	ro, err := store.OpenReadOnly(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ro.Close()
+	// Construction itself is half the test: a bad jsonschema tag or an
+	// unreflectable In/Out type panics inside mcp.AddTool.
+	server := newMCPServer(ro, time.UTC, path)
+	if server == nil {
+		t.Fatal("newMCPServer returned nil")
+	}
+
+	// Roundtrip over an in-memory transport and list the registered tools.
+	ctx := context.Background()
+	serverT, clientT := mcp.NewInMemoryTransports()
+	ss, err := server.Connect(ctx, serverT, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	defer ss.Close()
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "0"}, nil)
+	cs, err := client.Connect(ctx, clientT, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	defer cs.Close()
+
+	res, err := cs.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var got []string
+	for _, tool := range res.Tools {
+		got = append(got, tool.Name)
+	}
+	sort.Strings(got)
+	want := []string{"catalog_stats", "find_meeting", "get_transcript",
+		"list_by_date", "list_range", "recent", "search_transcripts"}
+	if len(got) != len(want) {
+		t.Fatalf("registered tools = %v, want %v", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("registered tools = %v, want %v", got, want)
+			break
+		}
 	}
 }
 
