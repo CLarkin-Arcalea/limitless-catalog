@@ -36,6 +36,16 @@ type FullRecord struct {
 const rowCols = `id, local_date, title, start_utc, end_utc,
 	duration_min, speakers, category, is_starred`
 
+// qualifiedRowCols returns rowCols with each column prefixed by alias+".",
+// for queries that join lifelogs and would otherwise be ambiguous.
+func qualifiedRowCols(alias string) string {
+	cols := strings.Split(rowCols, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + strings.TrimSpace(c)
+	}
+	return strings.Join(cols, ", ")
+}
+
 func scanRow(scanner interface{ Scan(...any) error }, withSnippet bool) (Row, error) {
 	var r Row
 	var speakers string

@@ -87,6 +87,7 @@ Own your data:
 
     limitless-catalog export --format md --out export/
     limitless-catalog export --format json
+    limitless-catalog export --search "budget review" --format md --out export-budget/
     limitless-catalog stats
 
 `stats` shows coverage and any days with zero recordings, so you can spot
