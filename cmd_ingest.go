@@ -78,9 +78,29 @@ func cmdIngest(cfg config, args []string) error {
 	default:
 		fs := flag.NewFlagSet("ingest", flag.ExitOnError)
 		date := fs.String("date", "", "single date YYYY-MM-DD")
+		id := fs.String("id", "", "single lifelog id to fetch and ingest")
 		fs.Parse(args)
+		if *id != "" {
+			l, err := client.GetLifelog(ctx, *id)
+			if err != nil {
+				return err
+			}
+			rec, err := catalog.Build(*l, cfg.loc)
+			if err != nil {
+				return err
+			}
+			res, err := st.Upsert(rec)
+			if err != nil {
+				return err
+			}
+			if err := st.SetState("last_ingest_run", time.Now().UTC().Format(time.RFC3339)); err != nil {
+				return err
+			}
+			fmt.Printf("%s: %s (%s, %s)\n", *id, res, rec.LocalDate, rec.Title)
+			return nil
+		}
 		if *date == "" {
-			return fmt.Errorf("usage: ingest backfill [--days N | --months N | --all | --from-start [--months N] | --start D --end D] | ingest incremental | ingest --date D")
+			return fmt.Errorf("usage: ingest backfill [--days N | --months N | --all | --from-start [--months N] | --start D --end D] | ingest incremental | ingest orphans | ingest --date D | ingest --id ID")
 		}
 		stats, err := ingestDate(ctx, client, st, cfg, *date)
 		if err != nil {
