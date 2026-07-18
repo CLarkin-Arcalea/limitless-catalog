@@ -27,6 +27,7 @@ Commands:
   stats     catalog totals, coverage, and gaps
   span      show the API's oldest/newest lifelogs vs local coverage
   mcp       serve the catalog to MCP clients over stdio (read-only)
+  serve     serve a local browser UI over the catalog (read-only)
 
 Global flags:
   -db string        path to the SQLite catalog (default "limitless.db")
@@ -80,6 +81,8 @@ func main() {
 		err = cmdSpan(cfg, rest)
 	case "mcp":
 		err = cmdMCP(cfg, rest)
+	case "serve":
+		err = cmdServe(cfg, rest)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
 		flag.Usage()
