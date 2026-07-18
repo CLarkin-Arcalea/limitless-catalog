@@ -119,6 +119,37 @@ func cmdMeeting(cfg config, args []string) error {
 	return printRows(rows, cfg.asJSON)
 }
 
+func cmdOnThisDay(cfg config, args []string) error {
+	fs := flag.NewFlagSet("onthisday", flag.ExitOnError)
+	date := fs.String("date", "", "override today's date (YYYY-MM-DD), for testing or reuse")
+	fs.Parse(args)
+	if fs.NArg() != 0 {
+		return fmt.Errorf("usage: onthisday [--date YYYY-MM-DD]")
+	}
+	d := *date
+	if d == "" {
+		d = time.Now().In(cfg.loc).Format("2006-01-02")
+	}
+	s, err := openStore(cfg)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	rows, err := s.OnThisDay(d)
+	if err != nil {
+		return err
+	}
+	out, err := formatOnThisDay(rows, cfg.loc, cfg.asJSON)
+	if err != nil {
+		return err
+	}
+	fmt.Print(out)
+	if cfg.asJSON {
+		fmt.Println()
+	}
+	return nil
+}
+
 func cmdGet(cfg config, args []string) error {
 	fs := flag.NewFlagSet("get", flag.ExitOnError)
 	full := fs.Bool("full", false, "print the full transcript")

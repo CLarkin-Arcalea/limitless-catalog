@@ -144,7 +144,7 @@ line-level queries are wanted.
 ```
 limitless-catalog/
   go.mod                        module github.com/CLarkin-Arcalea/limitless-catalog
-  main.go                       subcommand dispatch (ingest | search | date | range | recent | meeting | get | export | stats | span)
+  main.go                       subcommand dispatch (ingest | search | date | range | recent | meeting | onthisday | get | export | stats | span)
   README.md                     user-facing setup and usage
   LICENSE                       MIT
   .gitignore                    limitless.db, build artifacts
@@ -218,6 +218,9 @@ single-record full fetch.
   a time window (default 10-minute buffer each side). Overlap, not containment, so
   it catches recordings that start before or end after the given bounds. This is
   the query a meeting-debrief workflow would use.
+- `onthisday [--date YYYY-MM-DD]` returns lifelogs sharing today's (or the
+  given date's) month and day in any prior year, newest year first. The
+  personal-archive equivalent of photo-app "memories."
 - `get <id> [--full]` returns one record; `--full` prints the whole `transcript_md`.
 
 Output default is human-readable text; a `-json` global flag emits JSON so other

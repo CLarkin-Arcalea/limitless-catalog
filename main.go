@@ -22,6 +22,7 @@ Commands:
   range     list logs for a date range
   recent    list the newest logs
   meeting   find logs overlapping a time window
+  onthisday lifelogs from this month/day in previous years
   get       show one log (use --full for the transcript)
   export    write your archive out as markdown or JSON files
   stats     catalog totals, coverage, and gaps
@@ -70,6 +71,8 @@ func main() {
 		err = cmdRecent(cfg, rest)
 	case "meeting":
 		err = cmdMeeting(cfg, rest)
+	case "onthisday":
+		err = cmdOnThisDay(cfg, rest)
 	case "get":
 		err = cmdGet(cfg, rest)
 	case "export":

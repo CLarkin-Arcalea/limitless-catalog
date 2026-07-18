@@ -77,6 +77,8 @@ Query:
     limitless-catalog range 2026-07-01 2026-07-06
     limitless-catalog recent 10
     limitless-catalog meeting --end "2026-07-06 14:00" "2026-07-06 13:00"
+    limitless-catalog onthisday
+    limitless-catalog onthisday --date 2026-12-25
     limitless-catalog get --full <id>
 
 Every query takes the global `-json` flag for machine-readable output; like

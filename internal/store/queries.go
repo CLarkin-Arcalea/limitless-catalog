@@ -143,6 +143,20 @@ func (s *Store) Meeting(start, end time.Time, buffer time.Duration) ([]Row, erro
 	return collectRows(rows, false)
 }
 
+// OnThisDay lists logs sharing date's month and day in any earlier year,
+// newest year first (then start time within a year).
+func (s *Store) OnThisDay(date string) ([]Row, error) {
+	rows, err := s.db.Query(`
+		SELECT `+rowCols+` FROM lifelogs
+		WHERE strftime('%m-%d', local_date) = strftime('%m-%d', ?)
+		  AND strftime('%Y', local_date) < strftime('%Y', ?)
+		ORDER BY local_date DESC, start_utc ASC`, date, date)
+	if err != nil {
+		return nil, err
+	}
+	return collectRows(rows, false)
+}
+
 // Get returns one full record, or nil when the id is unknown.
 func (s *Store) Get(id string) (*FullRecord, error) {
 	row := s.db.QueryRow(`

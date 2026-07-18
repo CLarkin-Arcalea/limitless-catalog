@@ -133,6 +133,41 @@ func TestMeetingOverlap(t *testing.T) {
 	}
 }
 
+func TestOnThisDay(t *testing.T) {
+	s := openTemp(t)
+	recs := []catalog.Record{
+		{ID: "x24", StartUTC: "2024-07-15T14:00:00Z", EndUTC: "2024-07-15T14:30:00Z",
+			LocalDate: "2024-07-15", Title: "Old birthday call", DurationMin: 30,
+			UpdatedAt: "u1", Speakers: []string{"Ava"},
+			TranscriptMD: "happy birthday", Category: "unknown", RawJSON: `{"id":"x24"}`},
+		{ID: "y25", StartUTC: "2025-07-15T16:00:00Z", EndUTC: "2025-07-15T16:20:00Z",
+			LocalDate: "2025-07-15", Title: "Last year's call", DurationMin: 20,
+			UpdatedAt: "u2", Speakers: []string{"Ben"},
+			TranscriptMD: "another one", Category: "unknown", RawJSON: `{"id":"y25"}`},
+		{ID: "z26", StartUTC: "2026-07-15T10:00:00Z", EndUTC: "2026-07-15T10:10:00Z",
+			LocalDate: "2026-07-15", Title: "This year, excluded", DurationMin: 10,
+			UpdatedAt: "u3", Speakers: nil,
+			TranscriptMD: "today", Category: "unknown", RawJSON: `{"id":"z26"}`},
+		{ID: "w25", StartUTC: "2025-07-16T10:00:00Z", EndUTC: "2025-07-16T10:10:00Z",
+			LocalDate: "2025-07-16", Title: "Wrong day, excluded", DurationMin: 10,
+			UpdatedAt: "u4", Speakers: nil,
+			TranscriptMD: "off by one", Category: "unknown", RawJSON: `{"id":"w25"}`},
+	}
+	for _, r := range recs {
+		if _, err := s.Upsert(r); err != nil {
+			t.Fatalf("seed %s: %v", r.ID, err)
+		}
+	}
+
+	rows, err := s.OnThisDay("2026-07-15")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].ID != "y25" || rows[1].ID != "x24" {
+		t.Fatalf("OnThisDay got %+v, want [y25, x24]", rows)
+	}
+}
+
 func TestGet(t *testing.T) {
 	s := openTemp(t)
 	seed(t, s)
