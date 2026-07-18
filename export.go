@@ -2,11 +2,59 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/store"
 )
+
+const redactedPlaceholder = "[REDACTED]"
+
+// speakerRedactor replaces one or more speaker names with a placeholder in
+// exported output only; it never touches the database. Built once per
+// export run and applied to each in-memory FullRecord before rendering.
+type speakerRedactor struct {
+	lower map[string]bool
+	res   []*regexp.Regexp
+}
+
+// newSpeakerRedactor compiles a whole-word, case-insensitive matcher for
+// each name. Empty names are ignored.
+func newSpeakerRedactor(names []string) *speakerRedactor {
+	r := &speakerRedactor{lower: map[string]bool{}}
+	for _, n := range names {
+		if n == "" {
+			continue
+		}
+		r.lower[strings.ToLower(n)] = true
+		r.res = append(r.res, regexp.MustCompile(`(?i)\b`+regexp.QuoteMeta(n)+`\b`))
+	}
+	return r
+}
+
+// redact returns a copy of fr with the target speaker(s) replaced in the
+// speakers list, the transcript text, and raw_json (so a JSON export's raw
+// payload doesn't quietly leak the name the caller asked to redact).
+func (r *speakerRedactor) redact(fr store.FullRecord) store.FullRecord {
+	if len(r.res) == 0 {
+		return fr
+	}
+	for _, re := range r.res {
+		fr.TranscriptMD = re.ReplaceAllString(fr.TranscriptMD, redactedPlaceholder)
+		fr.RawJSON = re.ReplaceAllString(fr.RawJSON, redactedPlaceholder)
+	}
+	speakers := make([]string, len(fr.Speakers))
+	for i, sp := range fr.Speakers {
+		if r.lower[strings.ToLower(sp)] {
+			speakers[i] = redactedPlaceholder
+		} else {
+			speakers[i] = sp
+		}
+	}
+	fr.Speakers = speakers
+	return fr
+}
 
 // slugify lowercases s and reduces it to hyphen-separated alphanumerics,
 // capped at 60 chars. Empty input becomes "untitled".

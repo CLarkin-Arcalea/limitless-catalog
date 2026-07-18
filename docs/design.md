@@ -234,6 +234,22 @@ needs if the service goes dark.
 - `export --format json` writes the same selection as newline-delimited JSON (full
   records including `raw_json`).
 - Defaults to the full archive; date flags narrow it.
+- `export --redact-speaker NAME` (repeatable) replaces that speaker's name with
+  `[REDACTED]` in the speakers list, `transcript_md`, and (for JSON) `raw_json`,
+  for every exported record. This is an in-memory transform on the already-fetched
+  `FullRecord`s applied right before rendering/writing; it never runs a write
+  query against the store, so the underlying database is never modified.
+
+### `redact scan`: heuristic PII detection
+Scans the catalog (or a `--search`/`--start`/`--end`-narrowed subset, reusing the
+same store query functions as `export`) for text that looks like an SSN,
+credit card, phone number, or email, using plain stdlib `regexp` shape-matching
+(`internal` to the `main` package, not a `store` or `catalog` concern). The
+report lists the lifelog id, date, and pattern kind per match — never the
+matched substring — so the report itself can't leak the data it's flagging.
+Explicitly **best-effort heuristic detection, not a compliance guarantee**:
+expect false positives and false negatives; it is a pointer for a human to
+review, not a scrubber.
 
 ### `span`: discover before you download
 Shows the oldest and newest lifelogs available on the API (one ascending and one

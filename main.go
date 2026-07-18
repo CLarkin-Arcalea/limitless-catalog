@@ -24,6 +24,7 @@ Commands:
   meeting   find logs overlapping a time window
   get       show one log (use --full for the transcript)
   export    write your archive out as markdown or JSON files
+  redact    scan the catalog for likely PII (redact scan)
   stats     catalog totals, coverage, and gaps
   span      show the API's oldest/newest lifelogs vs local coverage
   mcp       serve the catalog to MCP clients over stdio (read-only)
@@ -74,6 +75,8 @@ func main() {
 		err = cmdGet(cfg, rest)
 	case "export":
 		err = cmdExport(cfg, rest)
+	case "redact":
+		err = cmdRedact(cfg, rest)
 	case "stats":
 		err = cmdStats(cfg, rest)
 	case "span":

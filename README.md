@@ -93,6 +93,35 @@ Own your data:
 `stats` shows coverage and any days with zero recordings, so you can spot
 gaps in a backfill.
 
+## Privacy and consent tooling
+
+Your pendant records other people too, and they never explicitly agreed to a
+permanent transcript. Two tools help you handle that responsibly:
+
+Redact a speaker's name from an export (repeatable flag, markdown or JSON):
+
+    limitless-catalog export --format md --out export/ --redact-speaker "Ava"
+    limitless-catalog export --format json --redact-speaker "Ava" --redact-speaker "Ben"
+
+This replaces the name with `[REDACTED]` in the speakers list, the
+transcript text, and (for JSON) the raw API payload, in the exported files
+only. **It is a transform applied at export time; your local catalog is
+never modified.**
+
+Scan the catalog for likely PII (SSN-, credit-card-, phone-, and
+email-shaped patterns), reusing the same `--search`/`--start`/`--end`
+filters as `export`:
+
+    limitless-catalog redact scan
+    limitless-catalog redact scan --search "budget review"
+    limitless-catalog redact scan --start 2026-01-01 --end 2026-03-31
+
+The report shows which lifelog id and date matched, and what kind of
+pattern (`ssn`, `credit_card`, `email`, `phone`) — never the matched text
+itself. **This is best-effort heuristic detection using simple regular
+expressions, not a compliance guarantee**; it will miss things and will
+flag some false positives. Treat it as a pointer to review, not a scrub.
+
 ## Global flags
 
     -db string        catalog path (default "limitless.db")

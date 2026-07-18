@@ -6,9 +6,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/CLarkin-Arcalea/limitless-catalog/internal/store"
 )
+
+// stringList collects repeated occurrences of a flag into a slice, e.g.
+// -redact-speaker Ava -redact-speaker Ben.
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+func (s *stringList) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
 
 func cmdExport(cfg config, args []string) error {
 	fs := flag.NewFlagSet("export", flag.ExitOnError)
@@ -17,6 +28,8 @@ func cmdExport(cfg config, args []string) error {
 	start := fs.String("start", "", "start date YYYY-MM-DD (default: everything)")
 	end := fs.String("end", "", "end date YYYY-MM-DD")
 	search := fs.String("search", "", "export only conversations matching this phrase")
+	var redactSpeakers stringList
+	fs.Var(&redactSpeakers, "redact-speaker", "speaker name to redact from exported output (repeatable); does not modify the catalog")
 	fs.Parse(args)
 
 	s, err := openStore(cfg)
@@ -37,6 +50,13 @@ func cmdExport(cfg config, args []string) error {
 	if len(recs) == 0 {
 		fmt.Println("nothing to export")
 		return nil
+	}
+
+	if len(redactSpeakers) > 0 {
+		red := newSpeakerRedactor(redactSpeakers)
+		for i := range recs {
+			recs[i] = red.redact(recs[i])
+		}
 	}
 
 	switch *format {
