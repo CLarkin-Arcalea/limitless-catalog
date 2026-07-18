@@ -23,6 +23,7 @@ Commands:
   recent    list the newest logs
   meeting   find logs overlapping a time window
   get       show one log (use --full for the transcript)
+  who       who you talk to: speakers ranked by lifelog count, or one speaker's detail
   export    write your archive out as markdown or JSON files
   stats     catalog totals, coverage, and gaps
   span      show the API's oldest/newest lifelogs vs local coverage
@@ -72,6 +73,8 @@ func main() {
 		err = cmdMeeting(cfg, rest)
 	case "get":
 		err = cmdGet(cfg, rest)
+	case "who":
+		err = cmdWho(cfg, rest)
 	case "export":
 		err = cmdExport(cfg, rest)
 	case "stats":
