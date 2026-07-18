@@ -150,6 +150,17 @@ Claude Code:
 Tools exposed: search_transcripts, find_meeting, list_by_date, list_range,
 recent, get_transcript, catalog_stats.
 
+## Browse in a web UI
+
+    limitless-catalog serve
+    limitless-catalog -db /path/to/limitless.db serve -port 9000
+
+Starts a local, read-only web server (binds to `127.0.0.1` only) and opens it
+in your default browser. Search, browse recent activity, click through to
+full transcripts, and view catalog stats. No JavaScript framework, no build
+step, no new dependency: a handful of static files embedded in the binary.
+Nothing written here can write to the database.
+
 ## Notes
 
 - The pendant records background media (TV, podcasts). A conservative
